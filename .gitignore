@@ -3,8 +3,12 @@
 
 # build
 /dist
+/.firebase
+/firebase-debug.log
+.firebase/
 
 # environment variables
+.env
 .env.local
 .env.*.local
 
@@ -16,3 +20,22 @@ pnpm-debug.log*
 
 # misc
 .DS_Store
+*.pem
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn
+*.bak
+*.tmp
+*.temp
+
+# testing
+/coverage
+
+# production
+/build
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
