@@ -5,32 +5,26 @@ import { auth, db } from './config/firebase';
 import { AppProvider } from './contexts/AppContext';
 
 import { Sidebar } from './components/navigation/Sidebar';
-import LoginPage from './components/LoginPage';
+import { Header } from './components/navigation/Header';
+import LoginPage from './components/LoginPage'; 
 
-// Import all your page components
+// Page components
 import Dashboard from './pages/Dashboard';
-import NetWorthManager from './pages/NetWorthManager'; // <-- IMPORT THE NEW PAGE
+import NetWorthManager from './pages/NetWorthManager';
 import LendedCashManager from './pages/LendedCashManager';
 import BudgetManager from './pages/BudgetManager';
 import TransactionsManager from './pages/TransactionsManager';
 import CashflowManager from './pages/CashflowManager';
 import FamilyManager from './pages/FamilyManager';
 import GoalsManager from './pages/GoalsManager';
+import { SettingsMenu } from './components/navigation/SettingsMenu';
 
-interface LendedCashItem {
-    id: string;
-    amount: number;
-    date: string;
-    expectedReturnDate?: string;
-    receiverName: string;
-    notes?: string;
-}
-
-// This is the main application component that holds the state
 const FolioApp = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
+  const [isDesktopExpanded, setIsDesktopExpanded] = useState(true);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [currentView, setCurrentView] = useState('dashboard');
 
   // Data states
@@ -40,7 +34,7 @@ const FolioApp = () => {
   const [transactions, setTransactions] = useState([]);
   const [income, setIncome] = useState(0);
   const [familyMembers, setFamilyMembers] = useState([]);
-  const [lendedCash, setLendedCash] = useState<LendedCashItem[]>([]);
+  const [lendedCash, setLendedCash] = useState([]);
   
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -51,24 +45,24 @@ const FolioApp = () => {
   }, []);
 
   useEffect(() => {
-    if (!user) return; // Don't fetch data if there's no user
+    if (!user) return;
     const userId = user.uid;
-    const appId = 'folio-app'; // Use a consistent App ID
+    const appId = 'folio-app';
 
     const unsubscribers = [
       onSnapshot(query(collection(db, 'artifacts', appId, 'users', userId, 'assets')), s => setAssets(s.docs.map(d => ({id:d.id,...d.data()})) as any)),
       onSnapshot(query(collection(db, 'artifacts', appId, 'users', userId, 'liabilities')), s => setLiabilities(s.docs.map(d => ({id:d.id,...d.data()})) as any)),
       onSnapshot(query(collection(db, 'artifacts', appId, 'users', userId, 'budgets')), s => setBudgets(s.docs.map(d => ({id:d.id,...d.data()})) as any)),
       onSnapshot(query(collection(db, 'artifacts', appId, 'users', userId, 'transactions')), s => { const txs=s.docs.map(d=>({id:d.id,...d.data()})); txs.sort((a:any,b:any)=>new Date(b.date).getTime()-new Date(a.date).getTime()); setTransactions(txs as any); }),
-      onSnapshot(doc(db, 'artifacts', appId, 'users', userId, 'financials', 'income'), d => { if(d.exists()) setIncome(d.data().amount); }),
-      onSnapshot(query(collection(db, 'artifacts', appId, 'users', userId, 'family')), s => setFamilyMembers(s.docs.map(d => ({id:d.id,...d.data()})) as any)),
-      onSnapshot(query(collection(db, 'artifacts', appId, 'users', userId, 'lendedCash')), s => {
-        const items = s.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as LendedCashItem[];
-        setLendedCash(items);
-      })
+      onSnapshot(doc(db, 'artifacts', appId, 'users', userId, 'financials', 'income'), d => { 
+        if(d.exists()) setIncome(d.data().amount); 
+      }),
+      onSnapshot(query(collection(db, 'artifacts', appId, 'users', userId, 'family')), s => 
+        setFamilyMembers(s.docs.map(d => ({id:d.id,...d.data()})) as any)
+      ),
+      onSnapshot(query(collection(db, 'artifacts', appId, 'users', userId, 'lendedCash')), s => 
+        setLendedCash(s.docs.map(d => ({id:d.id,...d.data()})) as any)
+      )
     ];
     return () => unsubscribers.forEach(unsub => unsub());
   }, [user]);
@@ -101,24 +95,34 @@ const FolioApp = () => {
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-100 dark:bg-slate-900">
-      <Sidebar 
-        user={user}
-        isExpanded={isSidebarExpanded}
-        setIsExpanded={setIsSidebarExpanded}
-        currentView={currentView}
-        onViewChange={setCurrentView}
-      />
-      <main className={`flex-grow transition-all duration-300 ${isSidebarExpanded ? 'ml-64' : 'ml-20'}`}>
-        <div className="p-4 sm:p-6 lg:p-8">
-          {renderView()}
+    <div className="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white min-h-screen">
+        <div className="lg:flex">
+            <Sidebar 
+                user={user}
+                isDesktopExpanded={isDesktopExpanded}
+                setIsDesktopExpanded={setIsDesktopExpanded}
+                isMobileOpen={isMobileMenuOpen}
+                setIsMobileOpen={setIsMobileMenuOpen}
+                currentView={currentView}
+                onViewChange={setCurrentView}
+            />
+            <div className="flex-1 flex flex-col">
+                <Header 
+                    onMenuClick={() => setIsMobileMenuOpen(true)} 
+                    onSettingsClick={() => setIsSettingsOpen(true)}
+                />
+                <main className={`flex-grow transition-all duration-300 lg:ml-20 ${isDesktopExpanded ? 'lg:ml-64' : 'lg:ml-20'}`}>
+                    <div className="p-4 sm:p-6 lg:p-8">
+                        {renderView()}
+                    </div>
+                </main>
+            </div>
         </div>
-      </main>
+        <SettingsMenu isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     </div>
   );
 };
 
-// The final entry point that wraps the app with the context provider
 export default function App() {
   return (
     <AppProvider>

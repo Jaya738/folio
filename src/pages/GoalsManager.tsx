@@ -54,6 +54,12 @@ const GoalsManager = ({ db, userId }: any) => {
             }>
                 {t('myGoals')}
             </SectionTitle>
+
+            {/* Mobile FAB */}
+            <button onClick={() => openModal()} className="lg:hidden fixed bottom-6 right-6 bg-cyan-500 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:bg-cyan-600 z-40">
+                <PlusCircle size={24} />
+            </button>
+
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingGoal ? t('edit') + " " + t('goals') : t('addGoal')}>
                 <form onSubmit={handleSave} className="grid grid-cols-1 gap-4 items-end">
                     <input value={name} onChange={e => setName(e.target.value)} placeholder="Goal Name" className="bg-slate-100 dark:bg-slate-700 p-3 rounded-md w-full" />

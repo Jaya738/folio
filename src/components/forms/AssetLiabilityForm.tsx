@@ -2,19 +2,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { PlusCircle } from 'lucide-react';
 
-interface Allocation {
-    memberId: string;
-    memberName: string;
-    percentage: number;
-}
-
 export const AssetLiabilityForm = ({ onSave, familyMembers, itemType, initialData, closeModal }: any) => {
     const { t } = useAppContext();
     const [name, setName] = useState('');
     const [value, setValue] = useState('');
     const [category, setCategory] = useState('');
     const [ownershipType, setOwnershipType] = useState('sole');
-    const [allocations, setAllocations] = useState<Allocation[]>([{ memberId: 'self', memberName: 'Self', percentage: 100 }]);
+    const [allocations, setAllocations] = useState([{ memberId: 'self', memberName: 'Self', percentage: 100 }]);
 
     const categories = itemType === 'Asset' ? ['Cash', 'Real Estate', 'Stocks', 'Vehicle', 'Other'] : ['Mortgage', 'Car Loan', 'Credit Card', 'Student Loan', 'Other Liability'];
 
@@ -26,52 +20,49 @@ export const AssetLiabilityForm = ({ onSave, familyMembers, itemType, initialDat
             setOwnershipType(initialData.ownership?.type || 'sole');
             setAllocations(initialData.ownership?.allocations || [{ memberId: 'self', memberName: 'Self', percentage: 100 }]);
         } else {
-             setName('');
-             setValue('');
-             setCategory('');
-             setOwnershipType('sole');
+             setName(''); setValue(''); setCategory(''); setOwnershipType('sole');
              setAllocations([{ memberId: 'self', memberName: 'Self', percentage: 100 }]);
         }
     }, [initialData]);
 
-    const handleAllocationChange = (memberId: string, fieldValue: string) => {
-        const newAllocations = [...allocations];
-        const existingIndex = newAllocations.findIndex(a => a.memberId === memberId);
-        if (existingIndex !== -1) {
-            newAllocations[existingIndex].percentage = parseFloat(fieldValue) || 0;
+    const handleAllocationChange = (id: string, field: 'checked' | 'percentage', fieldValue: boolean | string) => {
+        let newAllocations = [...allocations];
+        const existingIndex = newAllocations.findIndex(a => a.memberId === id);
+        if (field === 'checked') {
+            if (fieldValue) {
+                if (existingIndex === -1) {
+                    const member = familyMembers.find((f: any) => f.id === id) || { id: 'self', name: t('self') };
+                    newAllocations.push({ memberId: id, memberName: member.name, percentage: 0 });
+                }
+            } else {
+                newAllocations = newAllocations.filter(a => a.memberId !== id);
+            }
+        } else if (field === 'percentage') {
+            if (existingIndex !== -1) {
+                newAllocations[existingIndex].percentage = parseFloat(fieldValue as string);
+            }
         }
         setAllocations(newAllocations);
     };
-
+    
     const totalPercentage = useMemo(() => allocations.reduce((sum, a) => sum + a.percentage, 0), [allocations]);
-
+    
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name || !value || !category) {
-            alert("Please fill all required fields.");
-            return;
-        }
-        if (ownershipType === 'partial' && totalPercentage !== 100) {
-            alert("Ownership percentages must add up to 100%.");
-            return;
-        }
-        const ownership = {
-            type: ownershipType,
-            allocations: ownershipType === 'sole'
-                ? [{ memberId: 'self', memberName: 'Self', percentage: 100 }]
-                : allocations.map(a => ({ ...a, percentage: a.percentage }))
-        };
+        if (!name || !value || !category) { alert("Please fill all required fields."); return; }
+        if (ownershipType === 'partial' && totalPercentage !== 100) { alert("Ownership percentages must add up to 100%."); return; }
+        const ownership = { type: ownershipType, allocations: ownershipType === 'sole' ? [{ memberId: 'self', memberName: 'Self', percentage: 100 }] : allocations.map(a => ({...a, percentage: a.percentage || 0 })) };
         const itemData = { name, value: parseFloat(value), category, ownership };
         onSave(itemData);
         closeModal();
     };
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <input value={name} onChange={e => setName(e.target.value)} placeholder={t('name')} className="bg-slate-100 dark:bg-slate-700 p-2 rounded-md w-full" required/>
-                <input value={value} onChange={e => setValue(e.target.value)} type="number" placeholder={`${t('value')} (INR)`} className="bg-slate-100 dark:bg-slate-700 p-2 rounded-md w-full" required/>
-                <select value={category} onChange={e => setCategory(e.target.value)} className="bg-slate-100 dark:bg-slate-700 p-2 rounded-md h-[40px]" required>
+        <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="flex flex-wrap gap-4">
+                <input value={name} onChange={e => setName(e.target.value)} placeholder={t('name')} className="flex-grow bg-slate-100 dark:bg-slate-700 p-2 rounded-md w-full sm:w-auto" required />
+                <input value={value} onChange={e => setValue(e.target.value)} type="number" placeholder={`${t('value')} (INR)`} className="flex-grow bg-slate-100 dark:bg-slate-700 p-2 rounded-md w-full sm:w-auto" required />
+                <select value={category} onChange={e => setCategory(e.target.value)} className="flex-grow bg-slate-100 dark:bg-slate-700 p-2 rounded-md h-[40px] w-full sm:w-auto" required>
                     <option value="" disabled>Select {t('category')}</option>
                     {categories.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
@@ -93,17 +84,15 @@ export const AssetLiabilityForm = ({ onSave, familyMembers, itemType, initialDat
                             return (
                                 <div key={member.id} className="grid grid-cols-3 items-center gap-4">
                                     <div className="col-span-2 flex items-center">
-                                        <input type="checkbox" id={`cb-${member.id}`} checked={isChecked} onChange={e => handleAllocationChange(member.id, e.target.checked ? '100' : '0')} className="mr-3 h-4 w-4 rounded bg-slate-300 dark:bg-slate-600 text-cyan-500 focus:ring-cyan-600 border-slate-400 dark:border-slate-500" />
+                                        <input type="checkbox" id={`cb-${member.id}`} checked={isChecked} onChange={e => handleAllocationChange(member.id, 'checked', e.target.checked)} className="mr-3 h-4 w-4 rounded bg-slate-300 dark:bg-slate-600 text-cyan-500 focus:ring-cyan-600 border-slate-400 dark:border-slate-500" />
                                         <label htmlFor={`cb-${member.id}`} className="text-slate-900 dark:text-white">{member.name}</label>
                                     </div>
-                                    {isChecked && <input value={allocation.percentage} onChange={e => handleAllocationChange(member.id, e.target.value)} type="number" placeholder="%" className="bg-slate-300 dark:bg-slate-600 p-2 rounded-md w-full text-center" />}
+                                    {isChecked && <input value={allocation?.percentage || ''} onChange={e => handleAllocationChange(member.id, 'percentage', e.target.value)} type="number" placeholder="%" className="bg-slate-300 dark:bg-slate-600 p-2 rounded-md w-full text-center" />}
                                 </div>
                             );
                         })}
                     </div>
-                    <div className={`text-right font-bold pr-2 ${totalPercentage === 100 ? 'text-green-500' : 'text-red-500'}`}>
-                        {t('total')}: {totalPercentage}%
-                    </div>
+                    <div className={`text-right font-bold pr-2 ${totalPercentage === 100 ? 'text-green-500' : 'text-red-500'}`}>{t('total')}: {totalPercentage}%</div>
                 </div>
             )}
             <button type="submit" className="w-full bg-cyan-500 text-white font-bold py-3 px-4 rounded-md hover:bg-cyan-600 flex items-center justify-center gap-2 mt-4">

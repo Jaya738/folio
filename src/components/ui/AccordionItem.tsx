@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 
-export const AccordionItem = ({ titleContent, color, children }: { titleContent: React.ReactNode, color: string, children: React.ReactNode }) => {
-    const [isOpen, setIsOpen] = useState(false);
+export const AccordionItem = ({ titleContent, color, children, defaultOpen = false }: { titleContent: React.ReactNode, color: string, children: React.ReactNode, defaultOpen?: boolean }) => {
+    const [isOpen, setIsOpen] = useState(defaultOpen);
 
     const borderStyle = {
         borderLeftColor: color,

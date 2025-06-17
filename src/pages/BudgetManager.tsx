@@ -44,6 +44,12 @@ const BudgetManager = ({ db, userId, budgets }: any) => {
             }>
                 {t('monthlyBudgets')}
             </SectionTitle>
+
+            {/* Mobile FAB */}
+            <button onClick={() => openModal()} className="lg:hidden fixed bottom-6 right-6 bg-cyan-500 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:bg-cyan-600 z-40">
+                <PlusCircle size={24} />
+            </button>
+            
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingBudget ? `${t('edit')} ${t('budgets')}` : `${t('addNew')} ${t('budgets')}`}>
                 <form onSubmit={handleSave} className="space-y-4">
                     <input value={name} onChange={e => setName(e.target.value)} placeholder="Category Name" className="bg-slate-100 dark:bg-slate-700 p-3 w-full rounded-md" />
